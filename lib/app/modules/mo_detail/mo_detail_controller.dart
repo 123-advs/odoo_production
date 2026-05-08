@@ -195,7 +195,7 @@ class MoDetailController extends GetxController {
       isMutating.value = false;
     }
   }
-.
+
   Future<void> completeMo() async {
     if (isMutating.value) return;
     final cur = mo.value;

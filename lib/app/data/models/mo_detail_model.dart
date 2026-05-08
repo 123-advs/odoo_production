@@ -48,6 +48,7 @@ class MoDetailModel {
   bool get canConfirmMo => isDraft;
 
   /// `action_complete_mo`
+  bool get canCompleteMo =>
       isInProgress &&
       actualQty >= targetQty &&
       items.every((i) => i.isConfirmed);

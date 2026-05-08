@@ -38,6 +38,10 @@ dependencies:
   connectivity_plus: ^7.1.1
   logger: ^2.7.0
 
+  # Auto-update (Windows: download new Inno Setup installer + silent re-install)
+  package_info_plus: ^8.0.0
+  path_provider: ^2.1.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 
 import '../../routes/app_routes.dart';
 import '../../services/storage_service.dart';
+import '../../services/update_service.dart';
 
 class SplashController extends GetxController {
   Timer? _decideTimer;
@@ -19,6 +20,9 @@ class SplashController extends GetxController {
   Future<void> _decide() async {
     if (_disposed) return;
     try {
+      final updating = await Get.find<UpdateService>().checkAndPrompt();
+      if (updating || _disposed) return;
+
       final storage = Get.find<StorageService>();
       String? session;
       try {
