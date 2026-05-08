@@ -1,5 +1,5 @@
-/// Lightweight DTO for an `mrp.mo` row in list views. The full MO with items
-/// + workorders is fetched separately by `OdooProvider.fetchMoDetail` (Slice 2).
+/// `mrp.mo` row in list views
+///  `OdooProvider.fetchMoDetail`
 class MoModel {
   MoModel({
     required this.id,
@@ -26,7 +26,7 @@ class MoModel {
   final int? workingLineId;
   final String? workingLineName;
 
-  /// Computed on the server (`mrp.mo.working_line_status`):
+  /// (`mrp.mo.working_line_status`):
   /// pending | waiting | ready | progress | done | cancel
   final String? workingLineStatus;
 
@@ -83,7 +83,6 @@ class MoModel {
   }
 }
 
-/// Filter buckets for MO list. `all` = show everything except cancel.
 enum MoStateFilter { all, draft, inProgress, done }
 
 extension MoStateFilterX on MoStateFilter {

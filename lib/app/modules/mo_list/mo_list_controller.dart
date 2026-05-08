@@ -14,9 +14,6 @@ class MoListController extends GetxController {
   final selectedId = RxnInt();
   final errorMessage = RxnString();
 
-  /// Free-text filter applied client-side on the already-fetched list
-  /// (after the server-side state + process filter). Matches MO name,
-  /// product name, and product code.
   final searchQuery = ''.obs;
 
   final _provider = OdooProvider();
@@ -28,8 +25,6 @@ class MoListController extends GetxController {
   String? get workcenterProcess => _storage.workcenterProcess;
   String get userName => _storage.userName ?? '';
 
-  /// Title shown in the AppBar — combines process and line if both known.
-  /// Falls back to just the line name (or a generic label) gracefully.
   String get headerTitle {
     final name = workcenterName;
     final proc = workcenterProcess;
@@ -47,8 +42,6 @@ class MoListController extends GetxController {
     return null;
   }
 
-  /// Filtered list shown on screen — touches `mos` and `searchQuery` so any
-  /// Obx wrapped around it rebuilds when either changes.
   List<MoModel> get filteredMos {
     final q = searchQuery.value.trim().toLowerCase();
     if (q.isEmpty) return mos.toList();
@@ -73,7 +66,6 @@ class MoListController extends GetxController {
 
   void _ensureWorkcenter() {
     if (workcenterId == null) {
-      // Cold start without a line picked — bounce to picker.
       Future.microtask(() => Get.offAllNamed(AppRoutes.workcenterPicker));
       return;
     }
@@ -100,7 +92,7 @@ class MoListController extends GetxController {
         processId: workcenterProcessId,
         filter: filter.value,
       );
-      // Drop selection if it's no longer in the filtered list.
+
       if (selectedId.value != null &&
           !mos.any((m) => m.id == selectedId.value)) {
         selectedId.value = null;

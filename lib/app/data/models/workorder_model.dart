@@ -1,12 +1,3 @@
-/// Lightweight DTO for `mrp.workorder` (extended in `tcs_mms_management_product`).
-///
-/// State machine (Odoo standard MRP): `pending` → `waiting` → `ready` →
-/// `progress` → `done`, plus `cancel` from any state.
-///   - **pending / waiting**: upstream not ready
-///   - **ready**: ready to start (workers/materials available)
-///   - **progress**: running, timer ticking server-side
-///   - **done**: finished
-///   - **cancel**: aborted
 class WorkorderModel {
   WorkorderModel({
     required this.id,
@@ -23,12 +14,8 @@ class WorkorderModel {
   final int id;
   final String name;
   final String state;
-  /// Minutes already spent (server `duration`).
   final double duration;
-  /// Estimated minutes (server `duration_expected`).
   final double durationExpected;
-  /// IDs of `hr.employee` assigned to this workorder. `read` returns m2m
-  /// fields as a flat list of ints — names would need a separate `name_get`.
   final List<int> workerIds;
   final int? workcenterId;
   final String? workcenterName;
@@ -41,16 +28,9 @@ class WorkorderModel {
   bool get isCancel => state == 'cancel';
   bool get isTerminal => isDone || isCancel;
 
-  /// Whether `button_start` is callable now.
   bool get canStart => isReady || isPending;
   bool get canPause => isProgress;
 
-  /// Hoàn tất is visible alongside Bắt đầu / Tạm dừng — server's
-  /// `button_finish` is permissive (only checks remaining material; the
-  /// underlying state-machine rejection bubbles up as a UserError if
-  /// state isn't compatible). We surface the button on every non-terminal
-  /// row so the worker can finish a workorder without first having to
-  /// click Bắt đầu when items are already consumed elsewhere.
   bool get canFinish => !isTerminal;
 
   factory WorkorderModel.fromJson(Map<String, dynamic> json) {
@@ -85,8 +65,6 @@ class WorkorderModel {
     return null;
   }
 
-  /// `worker_ids` from `read` is a flat list of ints. Use this list to
-  /// match against the current user's `hr.employee.id` for filtering.
   static List<int> _m2mIds(dynamic v) {
     if (v is! List) return const [];
     return v.whereType<num>().map((e) => e.toInt()).toList();
@@ -94,7 +72,6 @@ class WorkorderModel {
 
   static DateTime? _parseDt(dynamic v) {
     if (v is String && v.isNotEmpty) {
-      // Odoo stores UTC without timezone marker; parse and treat as UTC.
       final parsed = DateTime.tryParse(v);
       return parsed?.toLocal();
     }

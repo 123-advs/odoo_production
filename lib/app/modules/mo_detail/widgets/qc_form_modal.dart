@@ -7,10 +7,6 @@ import '../../../data/models/production_model.dart';
 import '../../../data/models/qc_form_model.dart';
 import '../../../widgets/numpad.dart';
 
-/// Result returned by [QcFormModal]. `inspectionData` is the full
-/// payload `create_history_*` expects — built by merging the worker's
-/// edits over the raw form context. `checkListJson` is sent separately
-/// to `apply_*_result` (which only needs ok_qty / ng_qty / check_list).
 class QcFormResult {
   QcFormResult({
     required this.okQty,
@@ -25,12 +21,6 @@ class QcFormResult {
   final Map<String, dynamic> inspectionData;
 }
 
-/// Mirrors the MMS web QC form: production header, OK / NG numpads,
-/// then a scrollable list of inspection checkpoints. For each
-/// `input_type='ok_ng'` row the worker taps OK or NG; non-ok_ng rows
-/// (measurements / others) get a generic note about being filled in
-/// the web UI for now — their original payload is preserved so the
-/// server-side check_list round-trips intact.
 class QcFormModal extends StatefulWidget {
   const QcFormModal({
     super.key,
@@ -53,8 +43,7 @@ class _QcFormModalState extends State<QcFormModal> {
   @override
   void initState() {
     super.initState();
-    // Default OK = full actual_qty so the most common path is just to
-    // tick checkpoints and tap "Xác nhận" without retyping totals.
+
     _okText = _fmt(widget.production.actualQty);
     _items = widget.form.checkList;
   }
@@ -65,9 +54,6 @@ class _QcFormModalState extends State<QcFormModal> {
   bool get _totalMatches =>
       (_total - widget.production.actualQty).abs() < 0.0001;
 
-  /// Number of rows still without an answer (ok_ng / text / number).
-  /// Surfaced as a hint, not a hard gate — the MMS web "Apply" button
-  /// also lets users submit with partial check_list.
   int get _unanswered => _items.where((i) => !i.isAnswered).length;
 
   bool get _canConfirm => _totalMatches;
@@ -369,9 +355,7 @@ class _QcFormModalState extends State<QcFormModal> {
               ],
             ),
           ),
-          // Sticky column headers — match MMS web `<thead>`.
           const _CheckListHeader(),
-          // Body rows.
           Expanded(
             child: ListView.separated(
               padding: EdgeInsets.zero,
@@ -569,8 +553,6 @@ class _CountChip extends StatelessWidget {
   }
 }
 
-/// Column layout shared by header + body rows. Width values picked so
-/// the table fits within the QC form pane (~600-700dp wide on tablet).
 class _ColSpec {
   const _ColSpec({required this.flex, this.fixedWidth, required this.title});
 
@@ -938,10 +920,6 @@ class _OkNgButton extends StatelessWidget {
   }
 }
 
-/// Inline input cho `input_type='text'` hoặc `'number'`. TextField nhỏ
-/// gọn nằm chung row với các nút OK/NG (cùng vị trí thay thế). Dùng
-/// keyboardType numeric khi `isNumber=true` để bàn phím ảo trên Android
-/// chỉ hiện số.
 class _ValueInput extends StatefulWidget {
   const _ValueInput({
     required this.isNumber,

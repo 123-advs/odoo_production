@@ -26,8 +26,6 @@ class WorkcenterModel {
     );
   }
 
-  /// Odoo returns `false` (bool) for empty Char fields. `.toString()` would
-  /// give the literal "false" string, so coerce explicitly.
   static String? _str(dynamic v) {
     if (v is String && v.isNotEmpty) return v;
     return null;

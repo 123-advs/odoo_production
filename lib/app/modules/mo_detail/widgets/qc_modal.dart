@@ -13,9 +13,6 @@ class QcResult {
   final double ngQty;
 }
 
-/// Modal capturing OK / NG split for one `mrp.production` row.
-/// Validation: ok + ng must equal `production.actualQty` (server-side
-/// tolerates other splits but UX is cleaner if we enforce it client-side).
 class QcModal extends StatefulWidget {
   const QcModal({super.key, required this.production});
 
@@ -32,8 +29,7 @@ class _QcModalState extends State<QcModal> {
   @override
   void initState() {
     super.initState();
-    // Default OK = full actual_qty so the most common path is just
-    // tap "Xác nhận" without typing.
+
     _okText = _fmt(widget.production.actualQty);
   }
 

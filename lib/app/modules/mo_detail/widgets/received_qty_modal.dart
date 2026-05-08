@@ -6,12 +6,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/mo_item_model.dart';
 import '../../../widgets/numpad.dart';
 
-/// Modal for nhập `received_qty` của 1 dòng item ở trạng thái `draft`.
-/// Pops với double `qty` được nhập, hoặc `null` nếu user huỷ.
-///
-/// Validation client-side: 0 < qty ≤ stockQty. Server còn check thêm
-/// `received_qty <= stock_qty` qua constraint nên kể cả vượt cũng không
-/// hỏng dữ liệu — chỉ là UX kém.
 class ReceivedQtyModal extends StatefulWidget {
   const ReceivedQtyModal({super.key, required this.item});
 
@@ -27,7 +21,6 @@ class _ReceivedQtyModalState extends State<ReceivedQtyModal> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill với receivedQty hiện tại — nếu = 0 thì để trống cho dễ gõ.
     _qtyText = widget.item.receivedQty > 0
         ? _fmt(widget.item.receivedQty)
         : '';
@@ -59,8 +52,6 @@ class _ReceivedQtyModalState extends State<ReceivedQtyModal> {
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
-        // SingleChildScrollView keeps the modal usable on short windows —
-        // user scrolls if numpad + bottom actions don't fit.
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Column(

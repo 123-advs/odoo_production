@@ -1,7 +1,5 @@
 import 'mo_item_model.dart';
 
-/// Full MO snapshot used by the detail screen: scalar fields + nested
-/// items list. Workorders/operations are loaded separately in Slice 3.
 class MoDetailModel {
   MoDetailModel({
     required this.id,
@@ -46,11 +44,10 @@ class MoDetailModel {
   bool get isDone => state == 'done';
   bool get isCancel => state == 'cancel';
 
-  /// Whether `action_confirm_mo` is callable on the server now.
+  /// Whether `action_confirm_mo`
   bool get canConfirmMo => isDraft;
 
-  /// `action_complete_mo` requires actual ≥ target AND all items confirmed.
-  bool get canCompleteMo =>
+  /// `action_complete_mo`
       isInProgress &&
       actualQty >= targetQty &&
       items.every((i) => i.isConfirmed);

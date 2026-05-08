@@ -9,16 +9,6 @@ import '../../../data/models/actual_wizard_model.dart';
 import '../../../data/models/bom_info_model.dart';
 import '../../../widgets/numpad.dart';
 
-/// Modal for nhập sản lượng. Workflow:
-///   1. Caller has already built+read the wizard and fetched BOM info.
-///   2. User enters `actual_qty` via the numpad on the left.
-///   3. The right pane shows per-material `using_qty` re-computed from
-///      BOM ratio every keystroke (mirrors server `_onchange_actual_qty`).
-///   4. On confirm, the parent caller writes line_ids + actual_qty to the
-///      wizard and calls `action_confirm`.
-///
-/// Pops with the entered `actual_qty`, `usingQtyByLineId` and
-/// `otherLossByLineId` maps; pops `null` on cancel.
 class ActualWizardResult {
   ActualWizardResult({
     required this.actualQty,
@@ -48,14 +38,8 @@ class ActualWizardModal extends StatefulWidget {
 class _ActualWizardModalState extends State<ActualWizardModal> {
   String _qtyText = '';
 
-  /// Manual overrides for individual lines, keyed by line id. When the
-  /// user taps a row and types a custom using_qty, we store it here and
-  /// `_computeUsing` honours it instead of the BOM ratio. Auto-computed
-  /// lines fill the *remaining* need per product.
   final Map<int, double> _overrides = {};
 
-  /// Additional loss entered manually per line (`other_loss` server-side).
-  /// Independent from `using_qty` — does NOT influence BOM allocation.
   final Map<int, double> _losses = {};
 
   double get _qty => double.tryParse(_qtyText) ?? 0;
@@ -63,10 +47,7 @@ class _ActualWizardModalState extends State<ActualWizardModal> {
   void _onActualQtyChanged(String v) {
     setState(() {
       _qtyText = v;
-      // When the worker re-types actual_qty from scratch, clear overrides
-      // so the BOM ratio takes over again. Tweaks (single keystroke) keep
-      // overrides — only resetting on outright clear. `_losses` is unrelated
-      // to BOM allocation so we leave it intact.
+
       if (v.isEmpty) _overrides.clear();
     });
   }
@@ -106,10 +87,6 @@ class _ActualWizardModalState extends State<ActualWizardModal> {
     _setLoss(line.id, qty);
   }
 
-  /// Compute the BOM-driven base value per line — overrides + auto-fill
-  /// from the BOM ratio. Does NOT include `other_loss`. Used as the value
-  /// the worker edits in the Dùng modal (so they're typing the BOM
-  /// portion, not the BOM+loss combined).
   Map<int, double> _computeBaseUsing() {
     final result = <int, double>{};
     final actual = _qty;
@@ -159,10 +136,6 @@ class _ActualWizardModalState extends State<ActualWizardModal> {
     return result;
   }
 
-  /// Final using_qty per line shown in the badge AND sent to the server.
-  /// Mirrors MMS behaviour: total stock decrement for a line = BOM base
-  /// + other_loss. The worker types loss → Dùng visibly increases by the
-  /// same amount.
   Map<int, double> _computeUsing() {
     final base = _computeBaseUsing();
     final result = <int, double>{};
@@ -176,8 +149,6 @@ class _ActualWizardModalState extends State<ActualWizardModal> {
   }
 
   Future<void> _editLine(ActualWizardLine line, double _) async {
-    // Edit the BOM base — loss is added on top for display. This avoids
-    // confusing UX where user types "5" and sees "5.10" (5 + loss).
     final base = _computeBaseUsing()[line.id] ?? 0;
     final qty = await Get.dialog<double>(
       _LineQtyModal(line: line, initialQty: base),
@@ -188,16 +159,9 @@ class _ActualWizardModalState extends State<ActualWizardModal> {
     _setOverride(line.id, qty);
   }
 
-  /// Validate that BOM-required + per-product loss ≤ available remain
-  /// across siblings of the same product. Server's `action_confirm`
-  /// re-runs the same check on the combined `using_qty`.
-  ///
-  /// Overproduction (actual > MO remain_qty) is **allowed** — only flagged
-  /// as a non-blocking warning via `_overshootHint`. The hard block is
-  /// material availability, which the server enforces.
   String? _validateUsing(Map<int, double> using) {
     final bom = widget.bom;
-    if (bom == null) return null; // can't validate without bom; trust server
+    if (bom == null) return null;
     final actual = _qty;
     if (actual <= 0) return 'Vui lòng nhập số lượng > 0';
     final ratio = actual / (bom.productQty > 0 ? bom.productQty : 1);
@@ -226,9 +190,6 @@ class _ActualWizardModalState extends State<ActualWizardModal> {
     return v.toStringAsFixed(2);
   }
 
-  /// Non-blocking notice when the worker is producing more than the MO
-  /// target leftover. Server allows it (no constraint), but it's worth
-  /// surfacing visually so the user is aware.
   String? _overshootHint() {
     final actual = _qty;
     if (actual > widget.wizard.remainQty + 0.0001) {
@@ -542,8 +503,6 @@ class _ActualWizardModalState extends State<ActualWizardModal> {
           onPressed: err != null
               ? null
               : () {
-                  // Snapshot all loss values (overrides + originals) so the
-                  // server gets a complete picture even for untouched lines.
                   final losses = <int, double>{};
                   for (final line in widget.wizard.lines) {
                     losses[line.id] = _lossFor(line.id);
@@ -568,8 +527,6 @@ class _ActualWizardModalState extends State<ActualWizardModal> {
   }
 }
 
-/// Compact tappable badge displaying a per-line qty value (using or loss).
-/// Reused for both `using_qty` and `other_loss` in the breakdown pane.
 class _LineQtyBadge extends StatelessWidget {
   const _LineQtyBadge({
     required this.label,
@@ -664,8 +621,6 @@ class _LineQtyBadge extends StatelessWidget {
   }
 }
 
-/// Compact numpad modal for setting `using_qty` of a single wizard line.
-/// Returns the entered double, or `null` if user cancels.
 class _LineQtyModal extends StatefulWidget {
   const _LineQtyModal({required this.line, required this.initialQty});
 
@@ -865,9 +820,6 @@ class _LineQtyModalState extends State<_LineQtyModal> {
   }
 }
 
-/// Compact numpad modal for setting `other_loss` (hao hụt) of a single
-/// wizard line. Validates 0 ≤ qty (no upper bound — loss can exceed
-/// remain in some accounting flows).
 class _LineLossModal extends StatefulWidget {
   const _LineLossModal({required this.line, required this.initialQty});
 

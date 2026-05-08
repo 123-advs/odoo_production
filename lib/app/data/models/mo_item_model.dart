@@ -31,7 +31,7 @@ class MoItemModel {
   final double consumedQty;
   final double remainQty;
   final String uom;
-  final String state; // draft | confirm
+  final String state;
   final int? workcenterId;
   final String? workcenterName;
   final int? workerId;

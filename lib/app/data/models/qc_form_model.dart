@@ -1,25 +1,11 @@
-/// QC form preview returned from `mrp.production.action_pqc` /
-/// `action_oqc`. Server returns an `ir.actions.client` dict whose
-/// `context` payload carries everything the form UI needs.
-///
-/// We keep the **raw** `context` map verbatim — `mes.qc_form.history.
-/// create_history_*` expects an `inspectionData` payload mirroring the
-/// original action context, plus the worker's edits. Holding it raw and
-/// patching at submit time means we can never lose a key the server
-/// originally emitted (form_id, staff_id, type_roll, category_material,
-/// rev_no, isEMB, …).
 class QcFormPreview {
   QcFormPreview({
     required this.rawContext,
     required this.checkList,
   });
 
-  /// Verbatim copy of `action.context` from the server response.
   final Map<String, dynamic> rawContext;
 
-  /// Parsed, mutable view of `rawContext['check_list']`. The worker
-  /// edits these in the QC modal; we serialise them back into the
-  /// inspectionData payload at apply time.
   final List<QcCheckItem> checkList;
 
   String get title => rawContext['title']?.toString() ?? 'QC Form';
@@ -45,10 +31,6 @@ class QcFormPreview {
     );
   }
 
-  /// Build the `inspectionData` payload for `create_history_pqc` /
-  /// `create_history_oqc`. Merges user-entered totals + check_list over
-  /// the raw context, fills server-derived fields (`defect_ratio`,
-  /// `check_date`, `final_result`).
   Map<String, dynamic> toInspectionData({
     required double okQty,
     required double ngQty,
@@ -80,9 +62,6 @@ class QcFormPreview {
   }
 }
 
-/// One persisted QC history record (`mes.qc_form.history`). Read-only —
-/// shown via the "Xem lịch sử" button on production cards that have
-/// already been through PQC / OQC.
 class QcHistoryRecord {
   QcHistoryRecord({
     required this.id,
@@ -146,11 +125,6 @@ class QcHistoryRecord {
   }
 }
 
-/// One inspection checkpoint inside the QC form. The server sends a wide
-/// schema (X1-X5 measurements, HD1-HD14 extra fields). Mobile MVP only
-/// renders `result` (OK/NG) + `remark`; the rest is preserved verbatim
-/// in `extra` so the JSON we send back keeps every key the server
-/// originally sent.
 class QcCheckItem {
   QcCheckItem({
     required this.id,
@@ -175,15 +149,9 @@ class QcCheckItem {
   final String standard;
   final String inputType; // 'ok_ng' | 'measurement' | ...
 
-  /// Worker-entered result. For `ok_ng` inputs it's `'ok'` / `'ng'` /
-  /// `''` (unset). For measurement inputs we leave it untouched and
-  /// rely on `extra` for X1-X5 values.
   String result;
   String remark;
 
-  /// All other keys from the server payload (X1-X5, HD1-HD14, mes_qc_*_id,
-  /// pqc_worker_id, etc.). Mobile MVP doesn't edit these but echoes them
-  /// back unchanged so the server doesn't lose state when we re-submit.
   final Map<String, dynamic> extra;
 
   bool get isOk => result.toLowerCase() == 'ok';
@@ -192,8 +160,6 @@ class QcCheckItem {
   bool get isText => inputType == 'text';
   bool get isNumber => inputType == 'number';
 
-  /// True when the worker has provided a value matching the input type.
-  /// Used to gate the QC modal's confirm button.
   bool get isAnswered {
     switch (inputType) {
       case 'ok_ng':
@@ -238,8 +204,6 @@ class QcCheckItem {
     );
   }
 
-  /// Serialise back into the same shape the server sent — preserves
-  /// every original key plus the worker's edits.
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'id': id,

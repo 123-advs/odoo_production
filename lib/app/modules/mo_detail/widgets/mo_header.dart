@@ -7,9 +7,6 @@ import '../../../data/models/mo_detail_model.dart';
 import '../../../services/storage_service.dart';
 import '../../../widgets/state_badge.dart';
 
-/// Compact header — keeps the essentials visible in ~140dp so the tab
-/// content (items / workorders / etc.) gets the lion's share of the screen.
-/// Layout: title row · product line · stats+progress row · meta row.
 class MoHeader extends StatelessWidget {
   const MoHeader({super.key, required this.mo});
 
@@ -100,11 +97,6 @@ class MoHeader extends StatelessWidget {
     return parts.join(' · ');
   }
 
-  /// User's selected workcenter (from picker) — preferred over the MO's
-  /// `working_line_id` because multiple workers on different lines can
-  /// share the same MO; the header should reflect THIS worker's line.
-  /// Falls back to MO's workingLineName when the user hasn't picked one
-  /// (cold-start edge case).
   String? get _displayLineName {
     final picked = Get.find<StorageService>().workcenterName;
     if (picked != null && picked.isNotEmpty) return picked;

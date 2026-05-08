@@ -57,9 +57,6 @@ class MoListView extends GetView<MoListController> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            // Master-detail preview at >= 840dp: list on left, hint pane
-            // on right with selection summary. Tap (or "Mở MO") still pushes
-            // the full detail route so all 5 tabs (Slice 3+) get full space.
             final wide = constraints.maxWidth >= 840;
             if (wide) {
               return Row(

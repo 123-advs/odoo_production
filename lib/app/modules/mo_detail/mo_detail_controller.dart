@@ -43,9 +43,6 @@ class MoDetailController extends GetxController {
   final timelogs = <TimelogModel>[].obs;
   final errorMessage = RxnString();
 
-  /// IDs of `mrp.mo.item` rows ticked for `action_confirm_items`.
-  /// Persists selection across reloads as long as the items still exist
-  /// and are still in `draft` state — confirmed/removed rows drop out.
   final selectedItemIds = <int>{}.obs;
 
   final _provider = OdooProvider();
@@ -56,11 +53,6 @@ class MoDetailController extends GetxController {
 
   int? get _employeeId => _storage.employeeId;
 
-  /// Items scoped to the user's selected workcenter AND their own employee
-  /// record. The MO can carry items for multiple workers across multiple
-  /// lines within the same process — each worker sees only their own row.
-  /// Falls back gracefully when storage is missing either piece (cold
-  /// start, dev seed without employee, etc.) so nothing is lost.
   List<MoItemModel> get filteredItems {
     final all = mo.value?.items ?? const <MoItemModel>[];
     final wcId = workcenterId;
@@ -74,8 +66,6 @@ class MoDetailController extends GetxController {
     }).toList();
   }
 
-  /// Workorders scoped to the user's line + employee. Mirrors `filteredItems`
-  /// — `worker_ids` is m2m so we check membership instead of equality.
   List<WorkorderModel> get filteredWorkorders {
     final wcId = workcenterId;
     final empId = _employeeId;
@@ -99,8 +89,6 @@ class MoDetailController extends GetxController {
     isLoading.value = true;
     errorMessage.value = null;
     try {
-      // 5 RPCs in parallel — MO detail, workorders, productions,
-      // attachments, timelogs.
       final results = await Future.wait([
         _provider.fetchMoDetail(moId),
         _provider.fetchWorkorders(moId),
@@ -129,8 +117,6 @@ class MoDetailController extends GetxController {
   }
 
   void _pruneSelection(MoDetailModel detail) {
-    // Reuse the same filter as the items panel so selection state stays
-    // in sync with what the user actually sees.
     final wcId = workcenterId;
     final empId = _employeeId;
     final scoped = detail.items.where((i) {
@@ -209,11 +195,7 @@ class MoDetailController extends GetxController {
       isMutating.value = false;
     }
   }
-
-  /// Mirrors server `mrp.mo.action_complete_mo` ([mrp_mo.py:250]). Performs
-  /// the same 4-condition gate client-side so the worker gets a friendly,
-  /// itemised blocker list instead of a generic Odoo UserError. Server
-  /// re-runs the check on confirm — this is preview only.
+.
   Future<void> completeMo() async {
     if (isMutating.value) return;
     final cur = mo.value;
@@ -310,9 +292,6 @@ class MoDetailController extends GetxController {
     }
   }
 
-  /// Start / pause a workorder via the OEE wizard. The server picks the
-  /// right code path from `wo.state`; we just pick the right issue list
-  /// (`on` for start, `off` for pause) and a different modal title.
   Future<void> _runOeeFlow(WorkorderModel wo, OeeMode mode) async {
     if (isMutating.value) return;
     isMutating.value = true;
@@ -370,13 +349,6 @@ class MoDetailController extends GetxController {
   Future<void> finishWorkorder(WorkorderModel wo) async {
     if (isMutating.value) return;
 
-    // Mirror server-side `mrp.workorder.button_finish` (in
-    // tcs_mms_management_product): refuse to finish while any item on
-    // this line + worker still has `remain_qty > 0`. Doing the check
-    // client-side gives the worker a *specific* list of blockers
-    // instead of the server's generic "still has remaining material"
-    // UserError. The server validation is the source of truth — this
-    // is just a friendlier preview.
     const tolerance = 0.000001;
     final blockers = filteredItems
         .where((i) => i.remainQty > tolerance)
@@ -398,9 +370,6 @@ class MoDetailController extends GetxController {
       return;
     }
 
-    // No blockers — go straight to server. The button_finish override
-    // re-validates server-side so we're safe even if the client view
-    // is stale (race condition with another worker's edits).
     isMutating.value = true;
     try {
       await _provider.finishWorkorder(wo.id);
@@ -421,7 +390,7 @@ class MoDetailController extends GetxController {
     return v.toStringAsFixed(2);
   }
 
-  // ----- Actual qty wizard -----
+  // Actual qty wizard
 
   Future<void> openActualWizard() async {
     if (isMutating.value) return;
@@ -431,10 +400,6 @@ class MoDetailController extends GetxController {
     isMutating.value = true;
     int? wizardId;
     try {
-      // 1) Assemble wizard payload client-side (server's `_build_and_create`
-      //    is private — JSON-RPC refuses methods starting with `_`).
-      //    Filter items to eligible rows: this workcenter + worker, state
-      //    `confirm`, remain_qty > 0.
       const tolerance = 0.000001;
       final empId = _employeeId;
       final eligibleItems = cur.items.where((i) {
@@ -529,7 +494,7 @@ class MoDetailController extends GetxController {
     }
   }
 
-  // ----- PQC / OQC -----
+  // PQC / OQC
 
   Future<void> openQc(ProductionModel production) async {
     if (isMutating.value) return;
@@ -577,8 +542,6 @@ class MoDetailController extends GetxController {
           isOqc: isOqc,
         );
       } on DioException catch (e) {
-        // History is a best-effort companion record — log but don't roll
-        // back the apply call (production state is already updated).
         AppNotify.warning(
           'Đã lưu kết quả nhưng không tạo được lịch sử',
           e.message ?? 'Liên hệ admin để kiểm tra.',
@@ -599,7 +562,7 @@ class MoDetailController extends GetxController {
     }
   }
 
-  // ----- Documents -----
+  // Documents
 
   static bool get _supportsCamera =>
       !kIsWeb && (Platform.isAndroid || Platform.isIOS);
@@ -737,8 +700,6 @@ class MoDetailController extends GetxController {
     }
   }
 
-  /// Items eligible for "Trả vật tư" — confirmed lines on the user's
-  /// line + worker that still have leftover (received_qty > consumed_qty).
   List<MoItemModel> get returnableItems {
     return filteredItems.where((i) {
       if (i.state != 'confirm') return false;

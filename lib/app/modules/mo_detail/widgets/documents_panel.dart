@@ -21,8 +21,7 @@ class DocumentsPanel extends GetView<MoDetailController> {
     return Obx(() {
       final mutating = controller.isMutating.value;
       final mo = controller.mo.value;
-      // Match items panel: only allow uploads while MO is running.
-      // Existing attachments stay visible in any state for reference.
+
       final canUpload = mo != null && mo.isInProgress;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

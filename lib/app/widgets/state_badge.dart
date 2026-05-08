@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 
-/// Visual badge for an Odoo MO/workorder state. Maps the 4 real states
-/// in `tcs_mms_management_product` (`draft`, `in_progress`, `done`, `cancel`)
-/// to a colour + Vietnamese label. Plan claimed 5 states; backend has 4.
 class StateBadge extends StatelessWidget {
   const StateBadge(this.state, {super.key});
 

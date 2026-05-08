@@ -8,16 +8,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 
-/// Barcode/QR/lot input that handles:
-///  - **USB HID barcode scanners** (Windows, Android via OTG): emit
-///    keystrokes ending in Enter — captured naturally by the focused
-///    [TextField] via `onSubmitted`.
-///  - **Camera scanner** (Android only): suffix button opens [ScannerScreen]
-///    via [Get.to]; on detect the screen pops the scanned string.
-///  - **Manual typing** (Windows fallback): same TextField.
-///
-/// The widget keeps focus and clears its own buffer after each successful
-/// scan so the next scan can flow in without user action.
 class ScanInput extends StatefulWidget {
   const ScanInput({
     super.key,
@@ -68,11 +58,6 @@ class _ScanInputState extends State<ScanInput> {
     }
   }
 
-  /// Re-acquire focus AFTER the current frame so any parent rebuild —
-  /// e.g. `controller.isMutating` flipping back to false in `MoDetail
-  /// Controller` — has finished. Otherwise the field can still be
-  /// `enabled: false` at the moment we request focus and the request
-  /// is silently dropped → user has to tap the field again.
   void _reclaimFocus() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focus.requestFocus();
@@ -108,11 +93,6 @@ class _ScanInputState extends State<ScanInput> {
           controller: _ctrl,
           focusNode: _focus,
           autofocus: widget.autofocus,
-          // Note: deliberately not disabled by `_busy` — keeping the field
-          // focusable lets a USB barcode scanner fire another scan while
-          // the previous RPC is still resolving. The internal `_busy` guard
-          // in `_submit` rejects the second submission cleanly. Visual
-          // feedback (spinner in prefixIcon) still shows the busy state.
           enabled: widget.enabled,
           textInputAction: TextInputAction.done,
           onSubmitted: _submit,

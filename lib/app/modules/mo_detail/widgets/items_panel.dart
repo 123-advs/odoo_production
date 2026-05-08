@@ -16,8 +16,7 @@ class ItemsPanel extends GetView<MoDetailController> {
     return Obx(() {
       final mo = controller.mo.value;
       if (mo == null) return const SizedBox.shrink();
-      // Only allow scanning once MO is started — drafts must press
-      // "Bắt đầu MO" first; done/cancel are read-only.
+
       final canScan = mo.isInProgress;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -41,9 +40,7 @@ class ItemsPanel extends GetView<MoDetailController> {
   Widget _itemsTable(MoDetailModel mo) {
     final items = controller.filteredItems;
     if (items.isEmpty) {
-      // Wrap in a scroll view so the column never overflows when the
-      // available height shrinks (e.g. on smaller windows or when the
-      // scan input + bottom buttons leave little room).
+
       final hasOtherLineItems = mo.items.isNotEmpty;
       final wcName = controller.workcenterName ?? '';
       final message = hasOtherLineItems
@@ -225,13 +222,6 @@ class _ItemRow extends StatelessWidget {
   }
 }
 
-/// Tappable qty cell. Mirrors the Odoo backend layout — three small
-/// numbers (Tồn / Còn / Nhận) followed by the UoM. For draft items the
-/// whole cell is wrapped in a colored container with an edit icon so the
-/// worker knows it's tappable; tapping opens the received-qty editor.
-///
-/// We use a stand-alone GestureDetector with `HitTestBehavior.opaque` so
-/// the tap doesn't bubble up and toggle the row checkbox.
 class _QtyCell extends StatelessWidget {
   const _QtyCell({required this.item});
 

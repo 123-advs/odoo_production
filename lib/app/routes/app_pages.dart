@@ -17,8 +17,6 @@ abstract class AppPages {
     GetPage(
       name: AppRoutes.splash,
       page: () => const SplashView(),
-      // Eager Get.put because SplashView body never reads `controller` —
-      // lazyPut would skip onInit/onReady. (See odoo_attendance gotcha 2.)
       binding: BindingsBuilder(() {
         Get.put(SplashController());
       }),
@@ -48,7 +46,6 @@ abstract class AppPages {
       name: AppRoutes.moDetail,
       page: () => const MoDetailView(),
       binding: BindingsBuilder(() {
-        // moId passed via Get.parameters['id'] on navigation.
         final id = int.parse(Get.parameters['id']!);
         Get.put(MoDetailController(moId: id));
       }),

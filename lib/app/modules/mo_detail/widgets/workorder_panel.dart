@@ -14,8 +14,6 @@ class WorkorderPanel extends GetView<MoDetailController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      // Touch the raw observable so Obx reacts to refreshes; render the
-      // filtered (line + worker) view.
       final _ = controller.workorders.length;
       final wos = controller.filteredWorkorders;
       if (wos.isEmpty) {
@@ -250,9 +248,6 @@ class _Meta extends StatelessWidget {
   }
 }
 
-/// Live timer for a workorder in `progress`. Ticks every second client-side
-/// from the server-reported `duration` (minutes) + elapsed time since the
-/// last reload. Restarts on next `loadDetail`.
 class _LiveDuration extends StatefulWidget {
   const _LiveDuration({required this.startedAt, required this.baseMinutes});
 

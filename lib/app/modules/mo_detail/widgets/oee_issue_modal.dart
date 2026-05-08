@@ -5,13 +5,6 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/issue_model.dart';
 
-/// Modal for picking a `standard.issue` reason before submitting an OEE
-/// wizard call (start or pause). Pops with the chosen [IssueModel] or
-/// `null` on cancel.
-///
-/// `mode` chỉ ảnh hưởng vẻ ngoài (icon + title + nút xác nhận); cùng dùng
-/// chung 1 RPC `submitOeeWizard`. Issues thì caller fetch riêng theo
-/// `operating_status`: `on` cho start, `off` cho pause.
 enum OeeMode { start, pause }
 
 class OeeIssueModal extends StatefulWidget {

@@ -1,7 +1,3 @@
-/// Snapshot of `mrp.mo.return.wizard` after `create`. Server's
-/// `_build_and_create` is private (JSON-RPC blocks `_` methods), so we
-/// build the line_ids client-side and call public `create` directly —
-/// same pattern as `ActualWizardModel`.
 class ReturnWizardModel {
   ReturnWizardModel({
     required this.id,
@@ -31,11 +27,8 @@ class ReturnWizardLine {
   final String lotName;
   final double remainQty;
   final double receivedQty;
-  /// Server `total_using_qty` mirrors `mrp.mo.item.consumed_qty` —
-  /// the qty already chewed up by previous Actual operations.
   final double totalUsingQty;
   final String uom;
-  /// Mutable in-memory only — sent back via `write` before `action_confirm`.
   double returnQty;
 
   factory ReturnWizardLine.fromJson(Map<String, dynamic> json) {

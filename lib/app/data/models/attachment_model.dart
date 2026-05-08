@@ -14,7 +14,7 @@ class AttachmentModel {
   final String? uploadByName;
   final DateTime? uploadDate;
 
-  /// Static URL to download the binary. Matches `action_download`'s URL format.
+  /// Matches `action_download`'s URL format.
   String downloadPath() =>
       '/web/content?model=mrp.mo.attachment&id=$id&field=file&filename_field=file_name&download=true';
 

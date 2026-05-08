@@ -18,14 +18,11 @@ import '../models/timelog_model.dart';
 import '../models/workcenter_model.dart';
 import '../models/workorder_model.dart';
 
-/// Single entry point for all Odoo JSON-RPC. Wraps `/web/session/authenticate`
-/// and `/web/dataset/call_kw`. Session cookie injection is handled by the
-/// `_AuthInterceptor` in `ApiService`, so callers never set headers manually.
 class OdooProvider {
   Dio get _dio => Get.find<ApiService>().dio;
   StorageService get _storage => Get.find<StorageService>();
 
-  // ----- Auth -----
+  // Auth
 
   Future<int?> login({
     required String login,
@@ -91,12 +88,11 @@ class OdooProvider {
         data: {'jsonrpc': '2.0', 'params': {}},
       );
     } catch (_) {
-      // best-effort: even if server-side destroy fails, local clear still runs
     }
     await _storage.clearSession();
   }
 
-  // ----- Workcenters -----
+  // Workcenters
 
   Future<List<WorkcenterModel>> fetchWorkcenters() async {
     final result = await callKw(
@@ -119,15 +115,8 @@ class OdooProvider {
     return const [];
   }
 
-  // ----- MO list -----
+  // MO list
 
-  /// Fetch MOs filtered by **process** (preferred) or by working line.
-  ///
-  /// Default behaviour scopes MOs to the worker's process (`mrp.mo.process_id
-  /// == processId`) so a worker on Line 1 of "EMB (SW.H)" sees every MO
-  /// flowing through that process — not just MOs already assigned to Line 1.
-  /// Falls back to `working_line_id` when `processId` is null (e.g. when
-  /// the picked workcenter has no process configured).
   Future<List<MoModel>> fetchMoList({
     required int workcenterId,
     int? processId,
@@ -171,7 +160,7 @@ class OdooProvider {
     return const [];
   }
 
-  // ----- MO detail -----
+  // MO detail
 
   Future<MoDetailModel> fetchMoDetail(int moId) async {
     final moResult = await callKw(
@@ -243,7 +232,7 @@ class OdooProvider {
     return const [];
   }
 
-  // ----- MO actions -----
+  // MO actions
 
   Future<void> confirmMo(int moId) async {
     await callKw(
@@ -265,10 +254,6 @@ class OdooProvider {
     );
   }
 
-  /// Server-side `action_scan_lot` reads `self.scan_workcenter_id` from the MO
-  /// row, so we must write the workcenter on the MO before the scan call.
-  /// Two RPCs (write + action) is intentional — wrapping both in a single
-  /// call would require a custom controller, deferred until Slice 4+.
   Future<void> scanItemLot({
     required int moId,
     required String lotName,
@@ -292,9 +277,6 @@ class OdooProvider {
     );
   }
 
-  /// `action_confirm_items` reads `selected_ids` from `self.env.context`.
-  /// Pass them via the JSON-RPC `kwargs.context` channel so Odoo merges them
-  /// into the env context for the call.
   Future<void> confirmItems({
     required int moId,
     required List<int> itemIds,
@@ -311,7 +293,7 @@ class OdooProvider {
     );
   }
 
-  // ----- Workorders -----
+  // Workorders
 
   Future<List<WorkorderModel>> fetchWorkorders(int moId) async {
     final result = await callKw(
@@ -343,10 +325,6 @@ class OdooProvider {
     return const [];
   }
 
-  /// Server-side `button_start` opens an OEE wizard by default. We bypass it
-  /// via `context.skip_oee_wizard=True` so the call resolves to a state
-  /// transition without returning an action dict the client can't render.
-  /// Slice 5 will add a proper OEE issue picker for `pause`.
   Future<void> startWorkorder(int workorderId) async {
     await callKw(
       model: 'mrp.workorder',
@@ -383,7 +361,7 @@ class OdooProvider {
     );
   }
 
-  // ----- Productions (mrp.production) + QC -----
+  // mrp.production) + QC
 
   Future<List<ProductionModel>> fetchProductions(int moId) async {
     final result = await callKw(
@@ -418,9 +396,6 @@ class OdooProvider {
     return const [];
   }
 
-  /// Fetch the QC form preview for a production. Calls the public
-  /// `action_pqc` / `action_oqc` (they return `ir.actions.client` dicts
-  /// whose `context` carries the form payload — including `check_list`).
   Future<QcFormPreview> previewQcForm({
     required int productionId,
     required bool isOqc,
@@ -439,10 +414,6 @@ class OdooProvider {
     throw StateError('Không tải được biểu mẫu kiểm tra ${isOqc ? "OQC" : "PQC"}');
   }
 
-  /// Direct PQC apply — bypasses Odoo's form-based `action_pqc` (which
-  /// returns an action dict for a JS QC form). `apply_pqc_result` writes
-  /// ok_qty/ng_qty, persists `check_list` JSON, updates lots, marks
-  /// `pqc_status='pqc'` and finishes the active workorder.
   Future<void> applyPqc({
     required int productionId,
     required double okQty,
@@ -483,10 +454,6 @@ class OdooProvider {
     );
   }
 
-  /// Persist a QC inspection history record. Mirrors the second RPC
-  /// the MMS web frontend issues after `apply_*_result` — without it,
-  /// the inspection results live only on the production row and can't
-  /// be browsed via the QC history view.
   Future<void> createQcHistory({
     required Map<String, dynamic> inspectionData,
     required bool isOqc,
@@ -500,12 +467,6 @@ class OdooProvider {
     );
   }
 
-  /// Browse past QC inspections for a production. Two RPCs:
-  ///   1. `search_read` history records by production + form_type
-  ///   2. For each history, call public `prepare_check_list_data_history`
-  ///      which returns the assembled check_list with each line's
-  ///      question metadata (qc_type, qc_process, qc_code, method, …)
-  ///      and the result/remark filled in by the inspector.
   Future<List<QcHistoryRecord>> fetchQcHistory({
     required int productionId,
     required bool isOqc,
@@ -556,7 +517,7 @@ class OdooProvider {
     return records;
   }
 
-  // ----- BOM (for client-side material breakdown) -----
+  // BOM
 
   Future<BomInfoModel?> fetchBomInfo(int bomId) async {
     final bomResult = await callKw(
@@ -605,16 +566,7 @@ class OdooProvider {
     );
   }
 
-  // ----- Actual qty wizard -----
-
-  /// Create the actual-qty wizard with a precomputed payload. Mirrors
-  /// `mrp.mo.actual.wizard._build_and_create` server-side, but goes through
-  /// the public `create` method (Odoo's JSON-RPC layer rejects calls to
-  /// methods starting with `_`).
-  ///
-  /// Caller is responsible for filtering items to those eligible for this
-  /// workcenter + worker (state='confirm', remain_qty > 0) and computing
-  /// `remain_qty` = target_qty − Σ(production.actual_qty for this workcenter).
+  // Actual qty wizard
   Future<int> createActualWizard({
     required int moId,
     required int workcenterId,
@@ -709,9 +661,6 @@ class OdooProvider {
     return const [];
   }
 
-  /// Push computed `using_qty` + `other_loss` per line + `actual_qty` on
-  /// the wizard, then confirm. Server's `action_confirm` validates each
-  /// `using_qty <= remain_qty` and at least one line per BOM material > 0.
   Future<void> confirmActualWizard({
     required int wizardId,
     required double actualQty,
@@ -719,9 +668,7 @@ class OdooProvider {
     Map<int, double>? otherLossByLineId,
   }) async {
     final losses = otherLossByLineId ?? const <int, double>{};
-    // Write actual_qty + line_ids in one RPC. Odoo Many2many/One2many
-    // command (1, id, vals) means "update existing record". Merge using_qty
-    // and other_loss for the same line into a single update payload.
+
     final lineIds = <int>{...usingQtyByLineId.keys, ...losses.keys};
     final lineCommands = lineIds.map((id) {
       final vals = <String, dynamic>{};
@@ -753,11 +700,8 @@ class OdooProvider {
     );
   }
 
-  // ----- OEE / DownTime -----
+  // OEE / DownTime
 
-  /// Fetch issues filtered by `operating_status`:
-  ///   - `on`  → "good" reasons used at start
-  ///   - `off` → downtime reasons used at pause
   Future<List<IssueModel>> fetchIssues(String operatingStatus) async {
     final result = await callKw(
       model: 'standard.issue',
@@ -779,15 +723,6 @@ class OdooProvider {
     return const [];
   }
 
-  /// Run an OEE wizard step (start or pause) for a workorder. Server
-  /// `action_confirm` is symmetric — it inspects `wo.state` to decide:
-  ///   - state != progress → opens timelog + productivity-productive
-  ///     record, then `button_start(skip_oee_wizard=True)`
-  ///   - state == progress → closes productive with downtime reason,
-  ///     then `button_pending(skip_oee_wizard=True)`
-  ///
-  /// Caller picks the right `issueId` by fetching `standard.issue` filtered
-  /// by `operating_status`: `on` for start, `off` for pause.
   Future<void> submitOeeWizard({
     required int workorderId,
     required int? employeeId,
@@ -816,7 +751,7 @@ class OdooProvider {
     );
   }
 
-  // ----- Document attachments -----
+  // Document attachments
 
   Future<List<TimelogModel>> fetchTimelogs(int moId) async {
     final result = await callKw(
@@ -868,9 +803,6 @@ class OdooProvider {
     return const [];
   }
 
-  /// Two RPCs: create the upload wizard with file (base64) + metadata,
-  /// then call `action_upload`. Server creates `mrp.mo.attachment` and
-  /// also pushes the file into the KMS Documents folder for archival.
   Future<void> uploadAttachment({
     required int moId,
     required String fileName,
@@ -912,12 +844,7 @@ class OdooProvider {
     return result == true;
   }
 
-  // ----- Return material wizard -----
-
-  /// Create the return wizard with prebuilt line payloads. Mirrors
-  /// `mrp.mo.return.wizard._build_and_create` on the server (private
-  /// → not callable via JSON-RPC) by going through public `create`.
-  /// Caller filters eligible items (state='confirm' + remain_qty > 0).
+  // Return material wizard
   Future<int> createReturnWizard({
     required int moId,
     required List<Map<String, dynamic>> linePayloads,
@@ -996,10 +923,6 @@ class OdooProvider {
     return const [];
   }
 
-  /// Push `return_qty` per line and confirm. Server `action_confirm`
-  /// validates `return_qty <= remain_qty`, releases reserved stock at
-  /// the source location, and decrements `item.remain_qty`. Lines with
-  /// `return_qty == 0` are silently skipped server-side.
   Future<void> confirmReturnWizard({
     required int wizardId,
     required Map<int, double> returnQtyByLineId,
@@ -1037,8 +960,6 @@ class OdooProvider {
     return result == true;
   }
 
-  /// Write `received_qty` on a draft item line. Server `_check_received_qty
-  /// _not_exceed_stock` will reject any value over `stock_qty`.
   Future<void> setItemReceivedQty({
     required int itemId,
     required double qty,
@@ -1053,7 +974,7 @@ class OdooProvider {
     );
   }
 
-  // ----- Generic call_kw -----
+  // Generic call_kw 
 
   Future<dynamic> callKw({
     required String model,

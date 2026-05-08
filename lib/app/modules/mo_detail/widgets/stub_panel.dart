@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
-/// Placeholder for tabs not yet implemented (Slice 4–5).
 class StubPanel extends StatelessWidget {
   const StubPanel({super.key, required this.title, required this.message});
 

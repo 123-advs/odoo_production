@@ -32,8 +32,6 @@ class MoDetailView extends GetView<MoDetailController> {
               style: const TextStyle(fontWeight: FontWeight.w700),
             )),
         actions: [
-          // "Hoàn tất MO" sits in the AppBar so it's reachable from any
-          // tab — not just Vật tư. Visible only when MO is `in_progress`.
           Obx(() {
             final mo = controller.mo.value;
             if (mo == null || !mo.isInProgress) {
@@ -95,8 +93,6 @@ class MoDetailView extends GetView<MoDetailController> {
                 children: [
                   MoHeader(mo: mo),
                   const SizedBox(height: AppSpacing.sm),
-                  // Slim tab bar — no card wrapper, just a bottom border.
-                  // Saves ~30dp compared to the elevated rounded version.
                   DecoratedBox(
                     decoration: const BoxDecoration(
                       border: Border(

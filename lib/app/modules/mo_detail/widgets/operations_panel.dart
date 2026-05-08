@@ -14,7 +14,7 @@ class OperationsPanel extends GetView<MoDetailController> {
     return Obx(() {
       final mo = controller.mo.value;
       final productions = controller.productions;
-      // Touch the obs so Obx reacts when workorders refresh.
+
       final _ = controller.workorders.length;
       final hasRunningWo =
           controller.filteredWorkorders.any((w) => w.isProgress);

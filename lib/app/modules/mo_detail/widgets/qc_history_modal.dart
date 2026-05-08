@@ -7,10 +7,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/production_model.dart';
 import '../../../data/models/qc_form_model.dart';
 
-/// Read-only viewer for past PQC / OQC inspections. Mirrors the columns
-/// of [QcFormModal] but each row shows the persisted result as a static
-/// chip — no edit widgets. Multiple history entries are tabbed (rare,
-/// but possible if QC was re-run).
 class QcHistoryModal extends StatefulWidget {
   const QcHistoryModal({
     super.key,

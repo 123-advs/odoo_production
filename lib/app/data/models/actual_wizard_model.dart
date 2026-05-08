@@ -54,10 +54,9 @@ class ActualWizardLine {
   final double receivedQty;
   final double remainQty;
   final String uom;
-  /// Mutable in-memory only — sent back to the server with `write` before
   /// `action_confirm`.
   double usingQty;
-  /// Other loss (waste / scrap / shrinkage). Tracked alongside using_qty
+
   /// on `mrp.mo.actual.wizard.line.other_loss`.
   double otherLoss;
 

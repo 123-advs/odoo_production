@@ -1,5 +1,4 @@
-/// Row of `standard.issue` (TCS shared model). Used to tag OEE downtime
-/// and start events with a reason.
+/// Row of `standard.issue` Used to tag OEE downtime
 ///
 /// `operatingStatus`:
 ///   - `on` = normal/start-side issues

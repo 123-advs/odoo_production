@@ -6,20 +6,12 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/return_wizard_model.dart';
 import '../../../widgets/numpad.dart';
 
-/// Result returned by [ReturnWizardModal] — map of line id → return_qty,
-/// ready to write back to the server before `action_confirm`.
 class ReturnWizardResult {
   ReturnWizardResult({required this.returnQtyByLineId});
 
   final Map<int, double> returnQtyByLineId;
 }
 
-/// Modal for "Trả vật tư thừa" (return excess material). Lists each
-/// eligible item (state='confirm' + remain_qty > 0) with a tappable
-/// qty cell — taps open a Numpad modal to enter `return_qty`.
-///
-/// Validation: 0 ≤ return_qty ≤ remain_qty per line. At least one line
-/// must have `return_qty > 0`.
 class ReturnWizardModal extends StatefulWidget {
   const ReturnWizardModal({
     super.key,
@@ -35,7 +27,6 @@ class ReturnWizardModal extends StatefulWidget {
 }
 
 class _ReturnWizardModalState extends State<ReturnWizardModal> {
-  /// Mutable working copy of return_qty per line id.
   late final Map<int, double> _returnQty;
 
   @override
@@ -509,8 +500,6 @@ class _HdrFlex extends StatelessWidget {
   }
 }
 
-/// Numpad modal for editing the return_qty of a single line. Validates
-/// 0 ≤ qty ≤ remain_qty (server enforces same constraint).
 class _ReturnQtyModal extends StatefulWidget {
   const _ReturnQtyModal({required this.line, required this.initialQty});
 

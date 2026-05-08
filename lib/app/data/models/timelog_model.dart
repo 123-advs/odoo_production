@@ -1,13 +1,3 @@
-/// Row of `mrp.timelogs` — a per-event log produced by the OEE wizard.
-///
-/// Two flavours, distinguished by which timestamp is set:
-///   - **start** event (`startDate != null`, `endDate == null`): worker
-///     pressed Bắt đầu.
-///   - **end** event (`endDate != null`, `startDate == null`): worker
-///     pressed Tạm dừng.
-///
-/// `issue` carries the picked `standard.issue.name` (or null for the
-/// Operation default).
 class TimelogModel {
   TimelogModel({
     required this.id,
@@ -30,8 +20,6 @@ class TimelogModel {
   bool get isStart => startDate != null && endDate == null;
   bool get isEnd => endDate != null && startDate == null;
 
-  /// Best-effort timestamp shown on the event card. Falls back through
-  /// `issue_date → start_date → end_date`.
   DateTime? get timestamp => issueDate ?? startDate ?? endDate;
 
   factory TimelogModel.fromJson(Map<String, dynamic> json) {
@@ -58,7 +46,6 @@ class TimelogModel {
 
   static DateTime? _parseDt(dynamic v) {
     if (v is String && v.isNotEmpty) {
-      // Odoo stores UTC without timezone marker — parse as UTC then to local.
       return DateTime.tryParse('${v}Z')?.toLocal() ??
           DateTime.tryParse(v)?.toLocal();
     }

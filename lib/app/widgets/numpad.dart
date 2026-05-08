@@ -4,15 +4,6 @@ import 'package:flutter/services.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 
-/// Numeric keypad sized for shop-floor use (72dp buttons, gloves-friendly).
-/// Maintains its own buffer; reports the final string via [onChanged] every
-/// keystroke. Supports decimal entry (locked off via [allowDecimal] for
-/// integer-only fields like OK/NG counts).
-///
-/// Also accepts physical keyboard input — digits, `.`/`,` (decimal),
-/// Backspace, and Delete (clear). When multiple Numpads share a screen
-/// (e.g. QC OK/NG), pass `autofocus: true` to the one that should receive
-/// keystrokes by default; users can tap any display area to switch focus.
 class Numpad extends StatefulWidget {
   const Numpad({
     super.key,
@@ -56,18 +47,12 @@ class _NumpadState extends State<Numpad> {
     super.dispose();
   }
 
-  /// Translate a physical key event into the same string token the
-  /// on-screen buttons emit, then route through `_onKeyPress`. Swallows
-  /// the event so the dialog doesn't also trigger (e.g. Esc pop, Enter
-  /// submit) — handled by the parent button's primary action.
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
     final key = event.logicalKey;
 
-    // Digits — both top row and numpad. Cannot be `const` because
-    // LogicalKeyboardKey overrides `==` / `hashCode`.
     final digitMap = <LogicalKeyboardKey, String>{
       LogicalKeyboardKey.digit0: '0',
       LogicalKeyboardKey.digit1: '1',
@@ -217,7 +202,6 @@ class _NumpadState extends State<Numpad> {
     } else {
       // digit
       if (cur.length >= widget.maxLength) return;
-      // Strip leading zero unless followed by '.': "05" → "5"
       if (cur == '0') {
         next = key;
       } else {

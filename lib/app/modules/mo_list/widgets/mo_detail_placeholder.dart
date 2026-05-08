@@ -5,9 +5,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/mo_model.dart';
 import '../../../widgets/state_badge.dart';
 
-/// Right-pane preview shown in the wide (master-detail) layout. The full
-/// detail screen lives at the `/mo/detail` route — this widget summarises
-/// the selected MO and offers an "Open" button.
 class MoDetailPlaceholder extends StatelessWidget {
   const MoDetailPlaceholder({super.key, this.mo, this.onOpen});
 

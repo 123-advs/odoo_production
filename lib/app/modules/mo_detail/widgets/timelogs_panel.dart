@@ -7,8 +7,6 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../data/models/timelog_model.dart';
 import '../mo_detail_controller.dart';
 
-/// "Dừng máy" tab — lists `mrp.timelogs` events for the current MO. Each
-/// row is a single OEE event (start or end), oldest at the bottom.
 class TimelogsPanel extends GetView<MoDetailController> {
   const TimelogsPanel({super.key});
 
@@ -19,8 +17,6 @@ class TimelogsPanel extends GetView<MoDetailController> {
       if (logs.isEmpty) return const _EmptyState();
       return LayoutBuilder(
         builder: (context, constraints) {
-          // Wide layout (≥720): table with columns matching the Odoo
-          // backend view. Narrow: cards stacked vertically.
           if (constraints.maxWidth >= 720) {
             return _TimelogsTable(logs: logs);
           }

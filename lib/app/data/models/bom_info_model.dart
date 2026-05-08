@@ -1,15 +1,11 @@
-/// Subset of `mrp.bom` data needed to compute material consumption for
+/// Subset of `mrp.bom`
 /// the actual-qty wizard. Server's `_onchange_actual_qty` does:
 ///
 /// ```python
 /// ratio = actual_qty / bom.product_qty
 /// needed_per_line = ratio * bom_line.required_qty
-/// ```
-///
-/// where `required_qty` is a TCS extension on `mrp.bom.line` (computed from
-/// `net_qty` × `(1 + loss_percent)`). Client mirrors this math so the user
-/// sees breakdown in real-time without an extra server round-trip per
-/// keystroke.
+/// `required_qty` is `mrp.bom.line`
+/// `net_qty` × `(1 + loss_percent)`)
 class BomInfoModel {
   BomInfoModel({
     required this.id,
@@ -21,8 +17,6 @@ class BomInfoModel {
   final double productQty;
   final List<BomLineInfo> lines;
 
-  /// Required quantity for a given product at a given actual production qty.
-  /// Returns 0 if the product is not in this BOM.
   double requiredQtyFor({required int productId, required double actualQty}) {
     final line = lines.where((l) => l.productId == productId).firstOrNull;
     if (line == null || productQty <= 0) return 0;

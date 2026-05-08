@@ -5,17 +5,14 @@ import '../../data/models/workcenter_model.dart';
 import '../../data/providers/odoo_provider.dart';
 import '../../routes/app_routes.dart';
 import '../../services/storage_service.dart';
-// import '../../widgets/app_notify.dart';
 
 class WorkcenterPickerController extends GetxController {
   final isLoading = false.obs;
   final workcenters = <WorkcenterModel>[].obs;
   final errorMessage = RxnString();
 
-  /// Free-text filter applied to name + code + process name.
   final searchQuery = ''.obs;
 
-  /// When non-null, restrict cards to a single process. `null` = all.
   final selectedProcess = RxnString();
 
   final _provider = OdooProvider();
@@ -23,8 +20,6 @@ class WorkcenterPickerController extends GetxController {
 
   String get userName => _storage.userName ?? '';
 
-  /// Distinct, sorted list of process names found in the loaded workcenters.
-  /// Used to render the filter chips.
   List<String> get uniqueProcesses {
     final set = <String>{};
     for (final w in workcenters) {
@@ -35,9 +30,6 @@ class WorkcenterPickerController extends GetxController {
     return list;
   }
 
-  /// Returns workcenters that match the current search query AND selected
-  /// process. Touches all three observables so callers wrapped in Obx
-  /// rebuild on any of them changing.
   List<WorkcenterModel> get filteredWorkcenters {
     final q = searchQuery.value.trim().toLowerCase();
     final p = selectedProcess.value;
@@ -93,7 +85,6 @@ class WorkcenterPickerController extends GetxController {
       processId: wc.processId,
     );
     Get.offAllNamed(AppRoutes.moList);
-    // AppNotify.success('Đã chọn dây chuyền', wc.name);
   }
 
   Future<void> logout() async {

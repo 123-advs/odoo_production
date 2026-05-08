@@ -94,8 +94,6 @@ class WorkcenterPickerView extends GetView<WorkcenterPickerController> {
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Tighter grid: aim for ~280-340dp wide cards. Aspect 1.3
-        // (slightly wide-rectangle) — fits the hero-number layout cleanly.
         const targetWidth = 320.0;
         final cols = (constraints.maxWidth / targetWidth).floor().clamp(1, 6);
         return GridView.builder(
@@ -116,8 +114,6 @@ class WorkcenterPickerView extends GetView<WorkcenterPickerController> {
   }
 }
 
-/// Single-line search input. Filters the loaded list in-memory — no extra
-/// RPC, so feedback is instant.
 class _SearchBox extends StatefulWidget {
   const _SearchBox();
 
@@ -171,9 +167,6 @@ class _SearchBoxState extends State<_SearchBox> {
   }
 }
 
-/// Horizontal scrollable row of process chips. First chip is "Tất cả"
-/// (resets the process filter). Each process chip uses the same colour
-/// as the corresponding card stripe — so visual grouping carries over.
 class _ProcessFilterBar extends StatelessWidget {
   const _ProcessFilterBar();
 
@@ -271,12 +264,6 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-/// Single workcenter card. Visual hierarchy:
-///   1. Process chip at top (each process gets a deterministic colour
-///      so cards group visually without explicit section headers).
-///   2. Hero "name" — big primary-coloured wordmark, the focal point.
-///   3. Code as muted subtitle.
-///   4. "Vào ca →" footer giving a clear tap affordance.
 class _WorkcenterCard extends StatefulWidget {
   const _WorkcenterCard({required this.wc, required this.onTap});
 
@@ -329,7 +316,6 @@ class _WorkcenterCardState extends State<_WorkcenterCard> {
             highlightColor: processColor.withValues(alpha: 0.05),
             child: Stack(
               children: [
-                // Watermark icon — bottom-right, low opacity, decorative.
                 Positioned(
                   right: -12,
                   bottom: -12,
@@ -339,7 +325,6 @@ class _WorkcenterCardState extends State<_WorkcenterCard> {
                     color: processColor.withValues(alpha: 0.06),
                   ),
                 ),
-                // Top-left vertical accent stripe — colour from process.
                 Positioned(
                   left: 0,
                   top: AppSpacing.md,
@@ -467,7 +452,6 @@ class _WorkcenterCardState extends State<_WorkcenterCard> {
   }
 }
 
-/// Pill-shaped process tag at the top of the card.
 class _ProcessChip extends StatelessWidget {
   const _ProcessChip({
     required this.name,
@@ -519,9 +503,6 @@ class _ProcessChip extends StatelessWidget {
   }
 }
 
-/// Pre-curated palette of accent hues. A process name is hashed into one
-/// of these — same process always gets the same colour, so cards on the
-/// grid group visually without needing explicit section headers.
 const _processPalette = <Color>[
   Color(0xFF0EA5E9), // sky-500
   Color(0xFF8B5CF6), // violet-500
@@ -537,7 +518,6 @@ const _processPalette = <Color>[
 
 Color _processColor(String? name) {
   if (name == null || name.isEmpty) return AppColors.textMuted;
-  // Simple deterministic hash — fold codeUnits into an int.
   final h = name.codeUnits.fold<int>(0, (acc, c) => (acc * 31 + c) & 0x7fffffff);
   return _processPalette[h % _processPalette.length];
 }
@@ -566,8 +546,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// Shown when filters yield zero matches but `workcenters` itself isn't
-/// empty — distinguishes "nothing matches your search" from "no data".
 class _NoMatchState extends StatelessWidget {
   const _NoMatchState({required this.onReset});
 
