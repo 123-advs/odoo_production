@@ -1,7 +1,7 @@
 name: odoo_production
 description: "Shop-floor Flutter app for tcs_mms_management_product — Manufacturing Order execution on tablet (Android) + desktop (Windows)."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.11.5

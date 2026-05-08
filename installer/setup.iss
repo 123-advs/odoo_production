@@ -4,7 +4,7 @@
 ; Output installer: installer\Output\TCSProduction-Setup-1.0.0.exe
 
 #define MyAppName        "TCS Production"
-#define MyAppVersion     "1.0.0"
+#define MyAppVersion     "1.0.2"
 #define MyAppPublisher   "Auton&SI"
 #define MyAppExeName     "odoo_production.exe"
 #define MyAppId          "{{8C4F2D1A-9B3E-4F6C-A5D7-1E2F3A4B5C6D}"
