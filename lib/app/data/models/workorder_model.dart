@@ -6,6 +6,9 @@ class WorkorderModel {
     required this.duration,
     required this.durationExpected,
     required this.workerIds,
+    required this.workerNames,
+    required this.equipmentIds,
+    required this.equipmentNames,
     this.workcenterId,
     this.workcenterName,
     this.dateStart,
@@ -17,6 +20,15 @@ class WorkorderModel {
   final double duration;
   final double durationExpected;
   final List<int> workerIds;
+  /// Resolved display names for `workerIds`, in the same order. Empty
+  /// when the provider didn't (or couldn't) batch-read names.
+  final List<String> workerNames;
+  /// IDs of `maintenance.equipment` attached to this workorder (server
+  /// computes this from `workcenter_id.equipment_ids`).
+  final List<int> equipmentIds;
+  /// Resolved display names for `equipmentIds`, in the same order. Empty
+  /// when the provider didn't (or couldn't) batch-read names.
+  final List<String> equipmentNames;
   final int? workcenterId;
   final String? workcenterName;
   final DateTime? dateStart;
@@ -31,16 +43,35 @@ class WorkorderModel {
   bool get canStart => isReady || isPending;
   bool get canPause => isProgress;
 
-  bool get canFinish => !isTerminal;
+  /// Hoàn tất chỉ hiện khi line đã ở trạng thái dừng (ready/pending/waiting)
+  /// — buộc worker phải nhấn Tạm dừng trước, để OEE-issue wizard ghi
+  /// nhận lý do dừng máy. Server `button_finish` cũng raise UserError
+  /// nếu state vẫn là `progress`, đây là defense-in-depth UX.
+  bool get canFinish => !isTerminal && !isProgress;
 
-  factory WorkorderModel.fromJson(Map<String, dynamic> json) {
+  factory WorkorderModel.fromJson(
+    Map<String, dynamic> json, {
+    Map<int, String> workerNamesById = const {},
+    Map<int, String> equipmentNamesById = const {},
+  }) {
+    final wIds = _m2mIds(json['worker_ids']);
+    final equipIds = _m2mIds(json['equipment_ids']);
     return WorkorderModel(
       id: (json['id'] as num).toInt(),
       name: json['name']?.toString() ?? '',
       state: json['state']?.toString() ?? 'pending',
       duration: _toDouble(json['duration']),
       durationExpected: _toDouble(json['duration_expected']),
-      workerIds: _m2mIds(json['worker_ids']),
+      workerIds: wIds,
+      workerNames: wIds
+          .map((id) => workerNamesById[id])
+          .whereType<String>()
+          .toList(),
+      equipmentIds: equipIds,
+      equipmentNames: equipIds
+          .map((id) => equipmentNamesById[id])
+          .whereType<String>()
+          .toList(),
       workcenterId: _m2oId(json['workcenter_id']),
       workcenterName: _m2oName(json['workcenter_id']),
       dateStart: _parseDt(json['date_start']),

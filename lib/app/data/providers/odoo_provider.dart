@@ -24,10 +24,7 @@ class OdooProvider {
 
   // Auth
 
-  Future<int?> login({
-    required String login,
-    required String password,
-  }) async {
+  Future<int?> login({required String login, required String password}) async {
     final res = await _dio.post(
       '/web/session/authenticate',
       data: {
@@ -87,8 +84,7 @@ class OdooProvider {
         '/web/session/destroy',
         data: {'jsonrpc': '2.0', 'params': {}},
       );
-    } catch (_) {
-    }
+    } catch (_) {}
     await _storage.clearSession();
   }
 
@@ -126,10 +122,7 @@ class OdooProvider {
     final scope = processId != null
         ? ['process_id', '=', processId]
         : ['working_line_id', '=', workcenterId];
-    final domain = <List<dynamic>>[
-      scope,
-      ...filter.domain,
-    ];
+    final domain = <List<dynamic>>[scope, ...filter.domain];
     final result = await callKw(
       model: 'mrp.mo',
       method: 'search_read',
@@ -194,7 +187,12 @@ class OdooProvider {
     }
     final mo = moResult.first as Map<String, dynamic>;
 
-    final itemIds = (mo['item_ids'] as List?)?.whereType<num>().map((e) => e.toInt()).toList() ?? <int>[];
+    final itemIds =
+        (mo['item_ids'] as List?)
+            ?.whereType<num>()
+            .map((e) => e.toInt())
+            .toList() ??
+        <int>[];
     final items = await fetchMoItems(itemIds);
 
     return MoDetailModel.fromJson(mo, items: items);
@@ -310,19 +308,66 @@ class OdooProvider {
           'duration',
           'duration_expected',
           'worker_ids',
+          'equipment_ids',
           'workcenter_id',
           'date_start',
         ],
         'order': 'id asc',
       },
     );
-    if (result is List) {
-      return result
-          .whereType<Map<String, dynamic>>()
-          .map(WorkorderModel.fromJson)
-          .toList();
+    if (result is! List) return const [];
+    final rows = result.whereType<Map<String, dynamic>>().toList();
+
+    // `worker_ids` and `equipment_ids` are flat lists of ints from `read`
+    // — resolve names in 2 parallel batch reads (`hr.employee` /
+    // `maintenance.equipment`) so the UI can label every chip without an
+    // N+1 round-trip per workorder.
+    Set<int> collect(String field) => <int>{
+      for (final r in rows)
+        if (r[field] is List)
+          ...((r[field] as List).whereType<num>().map((e) => e.toInt())),
+    };
+
+    final workerIds = collect('worker_ids');
+    final equipIds = collect('equipment_ids');
+
+    Future<Map<int, String>> readNames(String model, Set<int> ids) async {
+      if (ids.isEmpty) return const {};
+      final res = await callKw(
+        model: model,
+        method: 'read',
+        args: [ids.toList()],
+        kwargs: {
+          'fields': ['id', 'name'],
+        },
+      );
+      final map = <int, String>{};
+      if (res is List) {
+        for (final r in res.whereType<Map<String, dynamic>>()) {
+          final id = (r['id'] as num?)?.toInt();
+          final name = r['name']?.toString();
+          if (id != null && name != null) map[id] = name;
+        }
+      }
+      return map;
     }
-    return const [];
+
+    final results = await Future.wait([
+      readNames('hr.employee', workerIds),
+      readNames('maintenance.equipment', equipIds),
+    ]);
+    final workerNamesById = results[0];
+    final equipNamesById = results[1];
+
+    return rows
+        .map(
+          (r) => WorkorderModel.fromJson(
+            r,
+            workerNamesById: workerNamesById,
+            equipmentNamesById: equipNamesById,
+          ),
+        )
+        .toList();
   }
 
   Future<void> startWorkorder(int workorderId) async {
@@ -411,7 +456,9 @@ class OdooProvider {
     if (result is Map) {
       return QcFormPreview.fromAction(result.cast<String, dynamic>());
     }
-    throw StateError('Không tải được biểu mẫu kiểm tra ${isOqc ? "OQC" : "PQC"}');
+    throw StateError(
+      'Không tải được biểu mẫu kiểm tra ${isOqc ? "OQC" : "PQC"}',
+    );
   }
 
   Future<void> applyPqc({
@@ -426,11 +473,7 @@ class OdooProvider {
       args: [
         [productionId],
       ],
-      kwargs: {
-        'ok_qty': okQty,
-        'ng_qty': ngQty,
-        'check_list': ?checkList,
-      },
+      kwargs: {'ok_qty': okQty, 'ng_qty': ngQty, 'check_list': ?checkList},
     );
   }
 
@@ -446,11 +489,7 @@ class OdooProvider {
       args: [
         [productionId],
       ],
-      kwargs: {
-        'ok_qty': okQty,
-        'ng_qty': ngQty,
-        'check_list': ?checkList,
-      },
+      kwargs: {'ok_qty': okQty, 'ng_qty': ngQty, 'check_list': ?checkList},
     );
   }
 
@@ -532,18 +571,15 @@ class OdooProvider {
     );
     if (bomResult is! List || bomResult.isEmpty) return null;
     final bom = bomResult.first as Map<String, dynamic>;
-    final lineIds = (bom['bom_line_ids'] as List?)
+    final lineIds =
+        (bom['bom_line_ids'] as List?)
             ?.whereType<num>()
             .map((e) => e.toInt())
             .toList() ??
         const <int>[];
     final productQty = (bom['product_qty'] as num?)?.toDouble() ?? 0;
     if (lineIds.isEmpty) {
-      return BomInfoModel(
-        id: bomId,
-        productQty: productQty,
-        lines: const [],
-      );
+      return BomInfoModel(id: bomId, productQty: productQty, lines: const []);
     }
     final linesResult = await callKw(
       model: 'mrp.bom.line',
@@ -555,15 +591,11 @@ class OdooProvider {
     );
     final lines = linesResult is List
         ? linesResult
-            .whereType<Map<String, dynamic>>()
-            .map(BomLineInfo.fromJson)
-            .toList()
+              .whereType<Map<String, dynamic>>()
+              .map(BomLineInfo.fromJson)
+              .toList()
         : <BomLineInfo>[];
-    return BomInfoModel(
-      id: bomId,
-      productQty: productQty,
-      lines: lines,
-    );
+    return BomInfoModel(id: bomId, productQty: productQty, lines: lines);
   }
 
   // Actual qty wizard
@@ -578,7 +610,8 @@ class OdooProvider {
   }) async {
     if (linePayloads.isEmpty) {
       throw StateError(
-          'Không có vật tư nào đã xác nhận và còn dư cho dây chuyền + công nhân hiện tại.');
+        'Không có vật tư nào đã xác nhận và còn dư cho dây chuyền + công nhân hiện tại.',
+      );
     }
     final result = await callKw(
       model: 'mrp.mo.actual.wizard',
@@ -623,7 +656,8 @@ class OdooProvider {
       throw StateError('Wizard $wizardId không tồn tại');
     }
     final w = wResult.first as Map<String, dynamic>;
-    final lineIds = (w['line_ids'] as List?)
+    final lineIds =
+        (w['line_ids'] as List?)
             ?.whereType<num>()
             .map((e) => e.toInt())
             .toList() ??
@@ -685,10 +719,7 @@ class OdooProvider {
       method: 'write',
       args: [
         [wizardId],
-        {
-          'actual_qty': actualQty,
-          'line_ids': lineCommands,
-        },
+        {'actual_qty': actualQty, 'line_ids': lineCommands},
       ],
     );
     await callKw(
@@ -884,7 +915,8 @@ class OdooProvider {
       throw StateError('Wizard $wizardId không tồn tại');
     }
     final w = wResult.first as Map<String, dynamic>;
-    final lineIds = (w['line_ids'] as List?)
+    final lineIds =
+        (w['line_ids'] as List?)
             ?.whereType<num>()
             .map((e) => e.toInt())
             .toList() ??
@@ -928,7 +960,13 @@ class OdooProvider {
     required Map<int, double> returnQtyByLineId,
   }) async {
     final lineCommands = returnQtyByLineId.entries
-        .map((e) => [1, e.key, {'return_qty': e.value}])
+        .map(
+          (e) => [
+            1,
+            e.key,
+            {'return_qty': e.value},
+          ],
+        )
         .toList();
     if (lineCommands.isNotEmpty) {
       await callKw(
@@ -960,6 +998,85 @@ class OdooProvider {
     return result == true;
   }
 
+  Future<bool> deleteProduction(int productionId) async {
+    final result = await callKw(
+      model: 'mrp.production',
+      method: 'action_remove_self',
+      args: [
+        [productionId],
+      ],
+    );
+    return result == true;
+  }
+
+  /// Read the raw-material consumption recorded on a production —
+  /// `[(product_id, lot_id, qty), ...]` from `move_raw_ids[*].move_line_ids`.
+  /// Used to drive the post-delete rollback on the worker's
+  /// `mrp.mo.item` rows (server's unlink uses a `(product, lot, limit=1)`
+  /// search that picks the wrong row when duplicate items exist).
+  Future<List<ProductionConsumption>> readProductionConsumptions(
+    int productionId,
+  ) async {
+    final prodResult = await callKw(
+      model: 'mrp.production',
+      method: 'read',
+      args: [
+        [productionId],
+      ],
+      kwargs: {
+        'fields': ['move_raw_ids'],
+      },
+    );
+    if (prodResult is! List || prodResult.isEmpty) return const [];
+    final moveIds = (prodResult.first['move_raw_ids'] as List?)
+            ?.whereType<num>()
+            .map((e) => e.toInt())
+            .toList() ??
+        const <int>[];
+    if (moveIds.isEmpty) return const [];
+
+    final mlResult = await callKw(
+      model: 'stock.move.line',
+      method: 'search_read',
+      kwargs: {
+        'domain': [
+          ['move_id', 'in', moveIds],
+        ],
+        'fields': ['product_id', 'lot_id', 'quantity'],
+      },
+    );
+    if (mlResult is! List) return const [];
+    return mlResult
+        .whereType<Map<String, dynamic>>()
+        .map((r) {
+          int? toId(dynamic v) =>
+              (v is List && v.isNotEmpty && v.first is num)
+                  ? (v.first as num).toInt()
+                  : null;
+          return ProductionConsumption(
+            productId: toId(r['product_id']) ?? 0,
+            lotId: toId(r['lot_id']),
+            qty: (r['quantity'] as num?)?.toDouble() ?? 0.0,
+          );
+        })
+        .where((c) => c.qty > 0)
+        .toList();
+  }
+
+  /// Direct write to `mrp.mo.item.consumed_qty`. The field is `readonly`
+  /// in the form view but unrestricted via ORM — used as the post-delete
+  /// fallback when server unlink misses the worker's row.
+  Future<void> writeItemConsumedQty(int itemId, double qty) async {
+    await callKw(
+      model: 'mrp.mo.item',
+      method: 'write',
+      args: [
+        [itemId],
+        {'consumed_qty': qty},
+      ],
+    );
+  }
+
   Future<void> setItemReceivedQty({
     required int itemId,
     required double qty,
@@ -974,7 +1091,7 @@ class OdooProvider {
     );
   }
 
-  // Generic call_kw 
+  // Generic call_kw
 
   Future<dynamic> callKw({
     required String model,
@@ -1004,4 +1121,18 @@ class OdooProvider {
     }
     return data['result'];
   }
+}
+
+/// One row of `stock.move.line` belonging to a deleted production —
+/// used to reconcile `mrp.mo.item.consumed_qty` post-delete.
+class ProductionConsumption {
+  ProductionConsumption({
+    required this.productId,
+    required this.qty,
+    this.lotId,
+  });
+
+  final int productId;
+  final int? lotId;
+  final double qty;
 }

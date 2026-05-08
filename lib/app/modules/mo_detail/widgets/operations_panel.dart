@@ -95,6 +95,18 @@ class _ProductionCard extends StatelessWidget {
                   ),
                 ),
                 _StatusChip(production: production),
+                if (production.canDelete) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  Obx(() => IconButton(
+                        tooltip: 'Xoá lần sản lượng (vật tư sẽ được trả về)',
+                        onPressed: c.isMutating.value
+                            ? null
+                            : () => c.deleteProduction(production),
+                        icon: const Icon(Icons.delete_outline, size: 22),
+                        color: AppColors.error,
+                        visualDensity: VisualDensity.compact,
+                      )),
+                ],
               ],
             ),
             const SizedBox(height: AppSpacing.sm),

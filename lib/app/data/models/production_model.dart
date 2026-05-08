@@ -45,6 +45,12 @@ class ProductionModel {
   bool get needsQc =>
       isLastLevel ? !oqcDone : !pqcDone;
 
+  /// Worker can delete the row only while QC hasn't been recorded yet.
+  /// Once PQC/OQC is applied, FG quants are written and lots are issued
+  /// — deleting then would require a more involved rollback that the
+  /// shop-floor flow doesn't support.
+  bool get canDelete => !pqcDone && !oqcDone;
+
   String get qcKind => isLastLevel ? 'OQC' : 'PQC';
 
   factory ProductionModel.fromJson(Map<String, dynamic> json) {

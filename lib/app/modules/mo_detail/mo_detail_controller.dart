@@ -350,22 +350,38 @@ class MoDetailController extends GetxController {
     if (isMutating.value) return;
 
     const tolerance = 0.000001;
-    final blockers = filteredItems
-        .where((i) => i.remainQty > tolerance)
-        .toList();
+
+    final allItems = mo.value?.items ?? const <MoItemModel>[];
+    final scopedItems = allItems.where((i) {
+      if (i.workcenterId != wo.workcenterId) return false;
+      if (i.workerId != null &&
+          wo.workerIds.isNotEmpty &&
+          !wo.workerIds.contains(i.workerId!)) {
+        return false;
+      }
+      return true;
+    });
+    final blockers =
+        scopedItems.where((i) => i.remainQty > tolerance).toList();
     if (blockers.isNotEmpty) {
+      final empId = _employeeId;
       final lines = blockers
           .take(8)
-          .map((i) =>
-              '· ${i.productName} (${i.lotName}): còn ${_fmtQty(i.remainQty)} ${i.uom}')
+          .map((i) {
+            final ownerTag = (empId != null && i.workerId != null && i.workerId != empId)
+                ? ' [công nhân khác]'
+                : '';
+            return '· ${i.productName} (${i.lotName}): còn ${_fmtQty(i.remainQty)} ${i.uom}$ownerTag';
+          })
           .join('\n');
       final more =
           blockers.length > 8 ? '\n… và ${blockers.length - 8} dòng khác' : '';
       await AppDialog.info(
         title: 'Chưa thể hoàn tất',
         message:
-            'Vật tư đã nhận chưa được tiêu thụ hết. Hãy nhập sản lượng '
-            'hoặc trả vật tư thừa trước khi hoàn tất:\n\n$lines$more',
+            'Công đoạn này được chia sẻ giữa các công nhân; vẫn còn vật tư '
+            'chưa tiêu thụ hết. Hãy nhập sản lượng hoặc trả vật tư thừa '
+            'trước khi hoàn tất:\n\n$lines$more',
       );
       return;
     }
@@ -402,11 +418,15 @@ class MoDetailController extends GetxController {
     try {
       const tolerance = 0.000001;
       final empId = _employeeId;
+      // Match server-side filter exactly:
+      //   `i.worker_id == worker` (both must be the same record, or both empty).
+      // The previous version permitted items where worker_id is null even
+      // when the current user has an employee — those rows polluted the
+      // wizard list and made it look like extra material lines appeared
+      // after each delete-and-recreate cycle.
       final eligibleItems = cur.items.where((i) {
         if (i.workcenterId != wc) return false;
-        if (empId != null && i.workerId != null && i.workerId != empId) {
-          return false;
-        }
+        if (i.workerId != empId) return false;
         if (i.state != 'confirm') return false;
         if (i.remainQty <= tolerance) return false;
         return true;
@@ -816,6 +836,88 @@ class MoDetailController extends GetxController {
           e.message ?? 'Không gọi được máy chủ.');
     } catch (e) {
       AppNotify.error('Không tải được lịch sử', e.toString());
+    } finally {
+      isMutating.value = false;
+    }
+  }
+
+  Future<void> deleteProduction(ProductionModel production) async {
+    if (isMutating.value) return;
+    if (!production.canDelete) {
+      AppNotify.warning(
+        'Không thể xoá',
+        'Lần sản lượng này đã được ${production.qcKind}. Không thể xoá.',
+      );
+      return;
+    }
+    final ok = await AppDialog.confirm(
+      title: 'Xoá lần sản lượng',
+      message:
+          'Xoá Lot "${production.lotName}" (sản lượng ${production.actualQty})?\n\n'
+          'Vật tư đã tiêu thụ sẽ được trả về kho. Hành động không thể hoàn tác.',
+      confirmLabel: 'Xoá',
+    );
+    if (!ok) return;
+    isMutating.value = true;
+    try {
+      // 1. Snapshot the production's raw consumption + the worker's
+      //    matching mrp.mo.item rows BEFORE deletion. We need this
+      //    because the server-side unlink rollback uses a search on
+      //    `(mo, product, lot, limit=1)` that picks an arbitrary row
+      //    when duplicate items exist on the MO — leaving the worker's
+      //    actually-consumed row stuck at its post-actual consumed_qty.
+      final consumptions =
+          await _provider.readProductionConsumptions(production.id);
+      final empId = _employeeId;
+      final wcId = workcenterId;
+      final preConsumed = <int, double>{};
+      for (final c in consumptions) {
+        final item = mo.value?.items.firstWhereOrNull(
+          (i) =>
+              i.workerId == empId &&
+              (wcId == null || i.workcenterId == wcId) &&
+              i.productId == c.productId &&
+              i.lotId == c.lotId,
+        );
+        if (item != null) {
+          preConsumed.putIfAbsent(item.id, () => item.consumedQty);
+        }
+      }
+
+      // 2. Run the standard delete. Server's unlink restores reserved
+      //    quants (the qty rollback uses ml.lot_id directly so it's
+      //    reliable), even if the consumed_qty path missed our row.
+      await _provider.deleteProduction(production.id);
+
+      // 3. Reconcile consumed_qty on the worker's items by SET (not
+      //    decrement) — idempotent: if the server already rolled back
+      //    correctly, expected matches actual and the write is a no-op.
+      for (final c in consumptions) {
+        final item = mo.value?.items.firstWhereOrNull(
+          (i) =>
+              i.workerId == empId &&
+              (wcId == null || i.workcenterId == wcId) &&
+              i.productId == c.productId &&
+              i.lotId == c.lotId,
+        );
+        if (item == null) continue;
+        final basis = preConsumed[item.id] ?? item.consumedQty;
+        final expected = (basis - c.qty).clamp(0.0, double.infinity);
+        await _provider.writeItemConsumedQty(item.id, expected);
+      }
+
+      AppNotify.success(
+        'Đã xoá lần sản lượng',
+        'Lot ${production.lotName} — vật tư đã được trả về.',
+      );
+      await loadDetail();
+    } on DioException catch (e) {
+      AppNotify.error(
+        'Xoá thất bại',
+        e.message ?? 'Không gọi được máy chủ.',
+      );
+    } catch (e) {
+      AppNotify.error('Xoá thất bại', e.toString());
     } finally {
       isMutating.value = false;
     }

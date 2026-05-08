@@ -85,10 +85,6 @@ class _WorkorderCard extends StatelessWidget {
                     icon: Icons.precision_manufacturing_outlined,
                     text: wo.workcenterName!,
                   ),
-                _Meta(
-                  icon: Icons.groups_outlined,
-                  text: '${wo.workerIds.length} công nhân',
-                ),
                 if (wo.isProgress)
                   _LiveDuration(startedAt: wo.dateStart, baseMinutes: wo.duration)
                 else if (wo.duration > 0)
@@ -103,6 +99,14 @@ class _WorkorderCard extends StatelessWidget {
                   ),
               ],
             ),
+            if (wo.workerIds.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _WorkerList(wo: wo),
+            ],
+            if (wo.equipmentIds.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _EquipmentList(wo: wo),
+            ],
             const SizedBox(height: AppSpacing.md),
             _ActionRow(wo: wo),
           ],
@@ -185,6 +189,181 @@ class _ActionRow extends StatelessWidget {
         ],
       );
     });
+  }
+}
+
+class _WorkerList extends StatelessWidget {
+  const _WorkerList({required this.wo});
+
+  final WorkorderModel wo;
+
+  @override
+  Widget build(BuildContext context) {
+    final names = wo.workerNames;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs + 2,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.accent.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.groups_outlined,
+              size: 16,
+              color: AppColors.accent,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs + 2),
+          Text(
+            'Công nhân (${wo.workerIds.length}): ',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.accent,
+            ),
+          ),
+          Expanded(
+            child: names.isEmpty
+                ? Text(
+                    '${wo.workerIds.length} công nhân',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  )
+                : Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final n in names)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppColors.accent.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.person_outline,
+                                size: 12,
+                                color: AppColors.accent,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                n,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EquipmentList extends StatelessWidget {
+  const _EquipmentList({required this.wo});
+
+  final WorkorderModel wo;
+
+  @override
+  Widget build(BuildContext context) {
+    final names = wo.equipmentNames;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs + 2,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.build_circle_outlined,
+              size: 16,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs + 2),
+          const Text(
+            'Thiết bị: ',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+          Expanded(
+            child: names.isEmpty
+                ? Text(
+                    '${wo.equipmentIds.length} thiết bị',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  )
+                : Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final n in names)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Text(
+                            n,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

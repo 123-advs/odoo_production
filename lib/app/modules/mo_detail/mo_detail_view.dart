@@ -27,22 +27,21 @@ class MoDetailView extends GetView<MoDetailController> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Obx(() => Text(
-              controller.mo.value?.name ?? 'Chi tiết MO',
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            )),
+        title: Obx(
+          () => Text(
+            controller.mo.value?.name ?? 'Chi tiết MO',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
         actions: [
           Obx(() {
             final mo = controller.mo.value;
-            if (mo == null || !mo.isInProgress) {
+            if (mo == null || !mo.isInProgress || mo.actualQty < mo.targetQty) {
               return const SizedBox.shrink();
             }
             final mutating = controller.isMutating.value;
             return Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 8,
-                horizontal: 4,
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               child: FilledButton.icon(
                 onPressed: mutating ? null : controller.completeMo,
                 icon: const Icon(Icons.check_circle_rounded, size: 18),
@@ -50,8 +49,7 @@ class MoDetailView extends GetView<MoDetailController> {
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.success,
                   foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   textStyle: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -108,8 +106,9 @@ class MoDetailView extends GetView<MoDetailController> {
                       indicatorColor: AppColors.primary,
                       indicatorWeight: 3,
                       dividerHeight: 0,
-                      labelPadding:
-                          EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      labelPadding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                       labelStyle: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -157,7 +156,10 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               message,
-              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.md),
